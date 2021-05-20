@@ -6,7 +6,7 @@ import time
 import multiprocessing
 import traceback
 
-TIMEOUT = 3  # seconds
+TIMEOUT = 1.5  # seconds
 
 
 class Individual:
@@ -28,8 +28,13 @@ class Individual:
         window_end_index = 55  # 20 rows at at time (for 3m intervals, this is a 60min window)
 
         df_window = df.iloc[window_start_index:window_end_index]
+        if df_window.size <= 0:
+            print("DataFrame ERROR! Returning starting balance $", balance)
+            return balance
 
         return_dict = self.run_code(df_window)
+
+        print(return_dict['recent_rsi'])
 
         if return_dict['exception_occurred']:
             print('Exception occurred... Fitness defaulted to 0.')
@@ -37,7 +42,7 @@ class Individual:
 
         if return_dict['should_buy'] is None:# or return_dict['confidence'] is None or return_dict['stop_loss'] is None:
             print("Didn't make a decision")
-            return balance / 2
+            # return balance / 2
 
         if return_dict['should_buy'] and return_dict['confidence'] > 0:
             dollars_to_spend = balance * return_dict['confidence']

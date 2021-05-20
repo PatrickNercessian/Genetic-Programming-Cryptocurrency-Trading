@@ -86,64 +86,79 @@ class Tree:
                 if which_child in [0, 2]:
                     expected_types = []
                 elif which_child == 1:
-                    if grow_freely:  # Free to grow
-                        expected_types = [unary_operator_type, binary_operator_type, self.var_type]
-                    else:  # we should stunt further growth
-                        expected_types = [self.var_type]
+                    expected_types = [unary_operator_type, binary_operator_type, self.var_type] if grow_freely \
+                        else [self.var_type]  # we should stunt further growth
             elif parent.value in binary_operator_type:
                 if which_child in [0, 2]:
-                    if grow_freely:  # Free to grow
-                        expected_types = [unary_operator_type, binary_operator_type, self.var_type]
-                    else:  # we should stunt further growth
-                        expected_types = [self.var_type]
+                    expected_types = [unary_operator_type, binary_operator_type, self.var_type] if grow_freely \
+                        else [self.var_type]  # we should stunt further growth
                 elif which_child == 1:
                     expected_types = []
-            elif parent.value in ['\n', '\nend-block']:
+            elif parent.value == '\n':  # TODO maybe use 'nothing' node as possible expected_type
                 if which_child in [0, 2]:
-                    if grow_freely:  # Free to grow
-                        expected_types = [assignment_type, line_type]
-                    else:  # we should stunt further growth
-                        expected_types = [assignment_type]
+                    expected_types = [assignment_type, line_type, if_type, while_type, for_type] if grow_freely \
+                        else [assignment_type]  # we should stunt further growth
                 elif which_child == 1:
                     expected_types = []
-            elif parent.value == ':':
+
+            elif parent.value == 'for ___:':
                 if which_child == 0:
-                    expected_types = [block_type]
+                    expected_types = []
                 elif which_child == 1:
-                    expected_types = []
-                elif which_child == 2:
-                    expected_types = [line_type]
-            elif parent.value == 'if' or parent.value == 'while':
-                if which_child in [0, 1]:
-                    expected_types = []
-                elif which_child == 2:
-                    if grow_freely:  # Free to grow
-                        expected_types = [boolean_type, self.var_type]
-                    else:  # we should stunt further growth
-                        expected_types = [self.var_type]
-            elif parent.value == 'for':
-                if which_child in [0, 1]:
-                    expected_types = []
-                elif which_child == 2:
                     expected_types = [in_type]
+                elif which_child == 2:
+                    expected_types = [block_type]
             elif parent.value == 'in':
                 if which_child in [0, 2]:
                     expected_types = [self.var_type]
                 elif which_child == 1:
                     expected_types = []
+
+            elif parent.value == 'while ___:':
+                if which_child == 0:
+                    expected_types = []
+                elif which_child == 1:
+                    expected_types = [boolean_type, self.var_type] if grow_freely else [self.var_type]
+                elif which_child == 2:
+                    expected_types = [block_type]
+            elif parent.value in ['if ___:', 'elif ___:']:
+                if which_child == 0:
+                    expected_types = []
+                elif which_child == 1:
+                    expected_types = [boolean_type, self.var_type] if grow_freely else [self.var_type]
+                elif which_child == 2:
+                    expected_types = [if_elif_block_type]
+            elif parent.value == 'else:':
+                if which_child in [0, 1]:
+                    expected_types = []
+                elif which_child == 2:
+                    expected_types = [block_type]
+
+            elif parent.value == 'if-elif-block':  # to be replaced by '\n ___\n'
+                if which_child == 0:
+                    expected_types = []
+                elif which_child == 1:
+                    expected_types = [assignment_type, line_type, if_type, while_type, for_type] if grow_freely \
+                        else [assignment_type]
+                elif which_child == 2:
+                    expected_types = [nothing_type, else_type]
+            elif parent.value == 'block':  # to be replaced by '\n ___\n'
+                if which_child in [0, 2]:
+                    expected_types = []
+                elif which_child == 1:
+                    expected_types = [assignment_type, line_type, if_type, while_type, for_type] if grow_freely \
+                        else [assignment_type]
+
             elif parent.value == 'and' or parent.value == 'or':
                 if which_child in [0, 2]:
-                    if grow_freely:  # Free to grow
-                        expected_types = [boolean_type, self.var_type]
-                    else:  # we should stunt further growth
-                        expected_types = [self.var_type]
+                    expected_types = [boolean_type, self.var_type] if grow_freely else [self.var_type]
                 elif which_child == 1:
                     expected_types = []
             elif parent.value in boolean_type:  # After if ('and' or 'or'), so that only triggers on other boolean_types
                 if which_child in [0, 2]:
-                    if grow_freely:  # Free to grow
+                    if grow_freely:
                         expected_types = [unary_operator_type, binary_operator_type, boolean_type, self.var_type]
-                    else:  # we should stunt further growth
+                    else:
                         expected_types = [self.var_type]
                 elif which_child == 1:
                     expected_types = []
@@ -152,14 +167,16 @@ class Tree:
                     expected_types = [self.var_type]
                 elif which_child == 1:
                     expected_types = []
-                elif which_child == 2:
+                elif which_child == 2:  # TODO issue where it's always choosing self.var_type? maybe bc of max_depth
                     if grow_freely:  # Free to grow
                         expected_types = [unary_operator_type, binary_operator_type, assignment_type, boolean_type,
                                           self.var_type]
                     else:  # we should stunt further growth
                         expected_types = [self.var_type]
+            elif parent.value == 'nothing':
+                expected_types = []
 
-        else:  # terminal node
+        else:  # terminal node or 'nothing' node
             expected_types = []
 
         return expected_types
@@ -178,43 +195,38 @@ def count_children(node: Node):
 def decode_in_order(root: Node, num_indentations=0):
     if root:
         to_add = root.value
+        if to_add != 'nothing':
+            code = decode_in_order(root.left, num_indentations)
 
-        code = decode_in_order(root.left, num_indentations)
+            if to_add == '\n':
+                to_add += (' ' * num_indentations)
+            elif (to_add in binary_operator_type) or (to_add in assignment_type) \
+                    or (to_add in in_type) or (to_add in boolean_type):
+                to_add = ' ' + to_add + ' '
+            elif to_add in ['block', 'if-elif-block']:
+                to_add = '\n ___\n'
 
-        if to_add.startswith('\n'):
-            if to_add.endswith('end-block'):
-                to_add = '\n'  # Don't actually add the 'end-block' to the code
-                if num_indentations > 0:
-                    num_indentations = num_indentations - 1
-            to_add += (' ' * num_indentations)
-        elif to_add == ':':
-            num_indentations = num_indentations + 1
-            to_add += '\n' + (' ' * num_indentations)
-        elif to_add in block_type:
-            to_add += ' '
-        elif to_add in binary_operator_type or to_add in assignment_type or to_add in in_type or to_add in boolean_type:
-            to_add = ' ' + to_add + ' '
-
-        if root.middle is None:
-            code += to_add
-        else:
-            if '(' in root.value:
-                index_of_close_bracket = root.value.index(')')
+            if root.middle is None:
+                code += to_add
             else:
-                index_of_close_bracket = root.value.index(']')
-            code += root.value[:index_of_close_bracket]
-            code += decode_in_order(root.middle, num_indentations)
-            code += root.value[index_of_close_bracket:]
+                index_of_blank = to_add.index('___')
+                code += to_add[:index_of_blank]
 
-        code += decode_in_order(root.right, num_indentations)
+                if to_add == '\n ___\n':
+                    code += decode_in_order(root.middle, num_indentations+1)
+                else:
+                    code += decode_in_order(root.middle, num_indentations)
 
-        return code
-    else:
-        return ''
+                code += to_add[index_of_blank+3:]
+
+            code += decode_in_order(root.right, num_indentations)
+
+            return code
+    return ''
 
 
 def plant_tree(max_depth: int):
-    root = Node(random.choice(line_type), 0)
+    root = Node(random.choice(line_type), depth=0)  # TODO right now, line_type is only '\n'
     # root = Node('\n')
     tree = Tree(root)
 
@@ -229,7 +241,7 @@ def grow_tree(tree: Tree, parent: Node, which_child, depth: int, max_depth: int)
     p = random.random()
 
     if parent.value == '=' and which_child == 0:
-        if p < (1 / (len(tree.var_type) + 1)): # Chance to create new variable if assigning variable
+        if p < (1 / (len(tree.var_type) + 1)):  # Chance to create new variable if assigning variable
             return Node(tree.new_var(), depth)
         else:
             return Node(random.choice(tree.var_type), depth)
@@ -253,7 +265,7 @@ def grow_tree(tree: Tree, parent: Node, which_child, depth: int, max_depth: int)
             node = Node(random.choice(possible_set), depth)
 
             # 50% chance of random constant if a variable is acceptable and parent isn't 'if' or 'while'
-            if p < 0.5 and tree.var_type in expected_types and parent.value not in ['if', 'while']:
+            if p < 0.5 and tree.var_type in expected_types and parent.value not in ['if ___:', 'while ___:']:
                 node = Node(rand_const(), depth)
 
             if depth + 1 > tree.highest_depth:
@@ -266,8 +278,8 @@ def grow_tree(tree: Tree, parent: Node, which_child, depth: int, max_depth: int)
         else:  # parent was terminal node
             return None
     else:  # reached max depth, and terminal node is allowed here
-        # 50% chance of picking random variable (100% chance if parent is 'if' or 'while')
-        if random.random() < 0.5 or parent.value in ['if', 'while']:
+        # 50% chance of picking random variable (100% chance if parent is 'if ___:' or 'elif ___:' or 'while ___:')
+        if random.random() < 0.5 or parent.value in ['if ___:', 'elif ___:', 'while ___:']:
             return Node(random.choice(tree.var_type), depth)
         else:  # 50% chance of picking random constant
             return Node(rand_const(), depth)

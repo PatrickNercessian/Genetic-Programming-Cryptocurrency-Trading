@@ -9,13 +9,14 @@ from tree import plant_tree, decode_in_order
 
 
 class Population:
-    def __init__(self, crypto_symbol: str, interval: str, pop_size=100, init_tree_size=2, mutation_probability=0.05):
+    def __init__(self, crypto_symbol: str, interval: str, pop_size=100, init_tree_size=2, mutation_probability=0.05,
+                 num_dataframes=3):
         self.crypto_symbol = crypto_symbol
         self.interval = interval
         self.pop_size = pop_size
         self.mutation_probability = mutation_probability
 
-        self.current_dataframe = crypto_data.get_random_df(crypto_symbol, interval)
+        self.current_dataframes = init_dataframes(num_dataframes, crypto_symbol, interval)
         self.directory_name = helper.create_run_folder()
 
         self.current_generation = 0
@@ -23,6 +24,11 @@ class Population:
         self.individuals = []
         for i in range(pop_size):
             self.individuals.append(Individual(plant_tree(init_tree_size), crypto_symbol, interval))
+
+    def init_dataframes(self, num_dataframes, crypto_symbol, interval):
+        self.current_dataframes = []
+        for i in range(num_dataframes):
+            self.current_dataframes.append(crypto_data.get_random_df(crypto_symbol, interval))
 
     def next_gen(self):
         if self.pop_size < 1000:
@@ -32,7 +38,7 @@ class Population:
 
         new_individuals = []
         while len(new_individuals) < self.pop_size:
-            if random.random() < 0.8:  # 80% chance of choosing from the better group
+            if random.random() < 0.6:  # 80% chance of choosing from the better group
                 index_1, index_2 = random.randint(0, cutoff), random.randint(0, cutoff)
                 while index_1 == index_2:
                     index_2 = random.randint(0, cutoff)
@@ -62,30 +68,41 @@ class Population:
                     elif new_indiv_2 is not None:
                         new_individuals.append(new_indiv_2)
 
-        self.current_dataframe = crypto_data.get_random_df(self.crypto_symbol, self.interval)
+        self.current_dataframes = init_dataframes(len(self.current_dataframes), self.crypto_symbol, self.interval)
         self.current_generation += 1
         self.individuals = new_individuals
 
     def evaluate_and_sort(self):
         for indiv in self.individuals:
-            indiv.fitness = indiv.evaluate(self.current_dataframe)
+            sum_balance = 0
+            for df in self.current_dataframes:
+                sum_balance += indiv.evaluate(df)
+            indiv.fitness = sum_balance / len(self.current_dataframes)
 
         self.individuals.sort(reverse=True, key=lambda x: x.fitness)
         all_code = self.get_all_code()
         print(all_code)
 
         with open(self.directory_name + os.sep + 'Generation ' + str(self.current_generation) + '.txt', 'w') as file:
-            file_contents = self.current_dataframe.to_string() + '\n\n\n' + all_code
+            file_contents = ""
+            for df in self.current_dataframes:
+                file_contents += df.to_string() + '\n\n\n'
+            file_contents += all_code
             file.write(file_contents)
 
     def get_all_code(self):
-        all_code = '\n----------------------------------------'
+        all_code = '\n----------------------------------------\n'
         for indiv in self.individuals:
             all_code += 'Fitness: ' + str(indiv.fitness) + '\nCode:\n' + indiv.code + '\n\n'
         all_code += '----------------------------------------\n'
         return all_code
 
 
+def init_dataframes(num_dataframes, crypto_symbol, interval):
+    current_dataframes = []
+    for i in range(num_dataframes):
+        current_dataframes.append(crypto_data.get_random_df(crypto_symbol, interval))
+    return current_dataframes
 
 
 def crossover(indiv_1: Individual, indiv_2: Individual):

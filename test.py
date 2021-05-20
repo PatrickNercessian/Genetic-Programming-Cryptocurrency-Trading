@@ -1,3 +1,4 @@
+import crypto_data
 from crypto_data import *
 from individual import Individual
 from population import Population, mutate, crossover
@@ -57,17 +58,132 @@ def test_tree():
     print('\n\n' + code + '\n\n')
     exec(code)
 
+def decision_example1(recent_rsi):
+    if recent_rsi < 30:
+        should_buy = True
+        confidence = (30 - recent_rsi) / 30
+    elif recent_rsi > 70:
+        should_buy = False
+        confidence = (recent_rsi - 70) / 30
+
+def test_example_algorithm():
+    if_node = Node('if ___:', 1)
+
+    less = Node('<', 2)
+    less.left = Node('recent_rsi', 3)
+    less.right = Node('30', 3)
+
+    if_node.middle = less
+
+    block = Node('if-elif-block', 2)
+    if_node.right = block
+
+    line1 = Node('\n', 3)
+    block.middle = line1
+
+    equals1 = Node('=', 4)
+    equals1.left = Node('should_buy', 5)
+    equals1.right = Node('True', 5)
+    line1.left = equals1
+
+    line2 = Node('\n', 4)
+    line1.right = line2
+
+    equals2 = Node('=', 5)
+    line2.left = equals2
+    equals2.left = Node('v0', 6)
+    minus = Node('-', 6)
+    equals2.right = minus
+    minus.left = Node('30', 7)
+    minus.right = Node('recent_rsi', 7)
+
+    equals3 = Node('=', 5)
+    line2.right = equals3
+    equals3.left = Node('confidence', 6)
+    divide = Node('/', 6)
+    equals3.right = divide
+    divide.left = Node('v0', 7)
+    divide.right = Node('20', 7)
+
+
+
+
+
+
+
+    elif_node = Node('elif ___:', 3)
+    block.right = elif_node
+
+    zgreater = Node('>', 4)
+    zgreater.left = Node('recent_rsi', 5)
+    zgreater.right = Node('60', 5)
+
+    elif_node.middle = zgreater
+
+    zblock = Node('if-elif-block', 4)
+    elif_node.right = zblock
+
+    zline1 = Node('\n', 5)
+    zblock.middle = zline1
+    zblock.right = Node('nothing', 5)
+
+    zequals1 = Node('=', 6)
+    zequals1.left = Node('should_buy', 7)
+    zequals1.right = Node('False', 7)
+    zline1.left = zequals1
+
+    zline2 = Node('\n', 6)
+    zline1.right = zline2
+
+    zequals2 = Node('=', 7)
+    zline2.left = zequals2
+    zequals2.left = Node('v0', 8)
+    zminus = Node('-', 8)
+    zequals2.right = zminus
+    zminus.left = Node('recent_rsi', 9)
+    zminus.right = Node('60', 9)
+
+    zequals3 = Node('=', 8)
+    zline2.right = zequals3
+    zequals3.left = Node('confidence', 9)
+    zdivide = Node('/', 9)
+    zequals3.right = zdivide
+    zdivide.left = Node('v0', 10)
+    zdivide.right = Node('20', 10)
+
+    root = if_node
+    code = decode_in_order(root)
+    print('\n\n' + code + '\n\n')
+
+    tree = Tree(root)
+
+    crypto_symbol = 'BTCUSDT'
+    interval = '1d'
+    individual = Individual(tree, crypto_symbol, interval)
+
+    sum = 0
+    num_runs = 30
+    for i in range(num_runs):
+        balance = individual.evaluate(crypto_data.get_random_df(crypto_symbol, interval))
+        print('Balance:', balance)
+        sum += balance
+    print('Fitness:', sum / num_runs)
+
 
 def test1():
     tree = plant_tree(2)
-    individual = Individual(tree, 'BTCUSDT', '3m')
-    individual.evaluate()
+    crypto_symbol = 'BTCUSDT'
+    interval = '3m'
+    individual = Individual(tree, crypto_symbol, interval)
+    individual.evaluate(crypto_data.get_random_df(crypto_symbol, interval))
     
 
 def test_plant_tree():
-    for i in range(30):
+    # for i in range(30):
         tree = plant_tree(2)
+        print(count_children(tree.root))
         print(decode_in_order(tree.root), '\n\n')
+        print()
 
 
 def test_crypto_data():
@@ -123,12 +239,13 @@ def test_crossover():
 
 
 def test_population():
-    population = Population('BTCUSDT', '3m', pop_size=1000)
+    population = Population('BTCUSDT', '1d', pop_size=200)
     population.evaluate_and_sort()
-    for i in range(3):
+    for i in range(10):
         population.next_gen()
         population.evaluate_and_sort()
 
 
-# test_tree()
-test_population()
+test_example_algorithm()
+# test_plant_tree()
+# test_population()
