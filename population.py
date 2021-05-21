@@ -32,13 +32,14 @@ class Population:
 
     def next_gen(self):
         if self.pop_size < 1000:
-            cutoff = round(0.32 * self.pop_size)
+            # cutoff = round(0.32 * self.pop_size)
+            cutoff = round(0.5 * self.pop_size)  # TODO: TEMPORARY. change back to 0.32
         else:  # Simplifies the 16% for 2000, 8% for 4000, etc.
             cutoff = 320
 
         new_individuals = []
         while len(new_individuals) < self.pop_size:
-            if random.random() < 0.6:  # 60% chance of choosing from the better group
+            if random.random() < 0.8:  # 80% chance of choosing from the better group
                 index_1, index_2 = random.randint(0, cutoff), random.randint(0, cutoff)
                 while index_1 == index_2:
                     index_2 = random.randint(0, cutoff)
@@ -51,15 +52,11 @@ class Population:
                 for i in range(10):  # Try up to 10 times to mutate, if it fails every time, skip
                     new_indiv = mutate(self.individuals[index_1])
                     if new_indiv is not None:
-                        new_indiv.tree.node_count = tree.count_children(new_indiv.tree.root)
                         new_individuals.append(new_indiv)
                         break
             else:
                 for i in range(10):  # Try up to 10 times to crossover, if it fails every time, skip
                     new_indiv_1, new_indiv_2 = crossover(self.individuals[index_1], self.individuals[index_2])
-
-                    new_indiv_1.tree.node_count = tree.count_children(new_indiv_1.tree.root)
-                    new_indiv_2.tree.node_count = tree.count_children(new_indiv_2.tree.root)
 
                     if new_indiv_1 is not None and new_indiv_2 is not None:
                         if len(new_individuals) < self.pop_size - 1:  # if there's room for 2
@@ -146,6 +143,7 @@ def crossover(indiv_1: Individual, indiv_2: Individual):
             parent_1.right = node_2
 
         indiv_1_copy.code = tree.decode_in_order(indiv_1_copy.tree.root)
+        indiv_1_copy.tree.node_count = tree.count_children(indiv_1_copy.tree.root)
     else:
         indiv_1_copy = None
 
@@ -160,7 +158,7 @@ def crossover(indiv_1: Individual, indiv_2: Individual):
             parent_2.right = node_1
 
         indiv_2_copy.code = tree.decode_in_order(indiv_2_copy.tree.root)
-
+        indiv_2_copy.tree.node_count = tree.count_children(indiv_2_copy.tree.root)
     else:
         indiv_2_copy = None
 
@@ -194,6 +192,7 @@ def mutate(indiv):
             
         indiv_copy.code = tree.decode_in_order(indiv_copy.tree.root)
 
+        indiv_copy.tree.node_count = tree.count_children(indiv_copy.tree.root)
         return indiv_copy
     else:
         return None

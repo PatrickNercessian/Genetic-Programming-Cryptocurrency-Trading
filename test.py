@@ -241,7 +241,7 @@ def test_crossover():
 
 
 def test_population():
-    population = Population('BTCUSDT', '1d', pop_size=200)
+    population = Population('BTCUSDT', '1d', pop_size=1000)
     population.evaluate_and_sort()
     for i in range(10):
         population.next_gen()
@@ -249,7 +249,7 @@ def test_population():
 
 
 if __name__ == '__main__':
-    test_crossover()
+    # test_crossover()
     # test_example_algorithm()
-# test_plant_tree()
-# test_population()
+    # test_plant_tree()
+    test_population()
