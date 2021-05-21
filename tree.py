@@ -22,7 +22,8 @@ import random
 class Tree:
     def __init__(self, root):
         self.root = root
-        self.highest_depth = 1
+        self.node_count = count_children(root)
+        self.highest_depth = 1  # TODO This is faulty, does not account for crossover or mutation
 
         # terminal set (can be added to)  # TODO add df_indicators once relevant function nodes are added
         self.var_type = ['should_buy', 'stop_loss', 'confidence', 'recent_rsi']
@@ -38,41 +39,30 @@ class Tree:
 
     def random_node(self, node: Node, parent: Node = None, which_child: int = None):
         p = random.random()
-
-        if node is None:  # Restart if you never selected a node
-            return self.random_node(self.root)
-
-        # TODO maybe make this probability increase as you traverse tree e.g add 1 to numerator
-        if p < (1 / self.highest_depth):
+        # if node is None:  # Restart if you never selected a node
+        #     return self.random_node(self.root)
+        if p < (node.depth / self.node_count):
             return node, parent, which_child
 
-        # TODO less readable but maybe faster
-        # if node.left:
-        #     if node.right:
-        #         if random.random() < 0.5:
-        #             return self.random_node(node.left, node, 0)
-        #         else:
-        #             return self.random_node(node.right, node, 2)
-        #     else:
-        #         return self.random_node(node.left, node, 0)
-        # elif node.right:
-        #     return self.random_node(node.right, node, 2)
-        # elif node.middle:
-        #     return self.random_node(node.middle, node, 1)
+        possible_paths = []
+        if node.left:
+            possible_paths.append(0)
+        if node.middle:
+            possible_paths.append(1)
+        if node.right:
+            possible_paths.append(2)
 
-        if node.left and node.right:
-            if random.random() < 0.5:
-                return self.random_node(node.left, node, 0)
-            else:
-                return self.random_node(node.right, node, 2)
-        elif node.middle:
-            return self.random_node(node.middle, node, 1)
-        elif node.left and not node.right:
-            return self.random_node(node.left, node, 0)
-        elif not node.left and node.right:
-            return self.random_node(node.right, node, 2)
-        else:  # if terminal node with no children
+        if len(possible_paths) == 0:  # if terminal node with no children
             return self.random_node(self.root)
+
+        rand_path = random.choice(possible_paths)
+
+        if rand_path == 0:
+            return self.random_node(node.left, node, 0)
+        elif rand_path == 1:
+            return self.random_node(node.middle, node, 1)
+        elif rand_path == 2:
+            return self.random_node(node.right, node, 2)
 
     #  which_child: 0 for left child, 1 for middle child, 2 for right child
     def get_expected(self, parent: Node, which_child: int, grow_freely=True):
@@ -186,6 +176,7 @@ def count_children(node: Node):
     if node:
         count = 1
         count += count_children(node.left)
+        count += count_children(node.middle)
         count += count_children(node.right)
         return count
     else:
@@ -227,12 +218,13 @@ def decode_in_order(root: Node, num_indentations=0):
 
 def plant_tree(max_depth: int):
     root = Node(random.choice(line_type), depth=0)  # TODO right now, line_type is only '\n'
-    # root = Node('\n')
     tree = Tree(root)
 
-    root.left = grow_tree(tree, root, 0, 0, max_depth)
-    root.middle = grow_tree(tree, root, 1, 0, max_depth)
-    root.right = grow_tree(tree, root, 2, 0, max_depth)
+    root.left = grow_tree(tree, root, 0, 1, max_depth)
+    root.middle = grow_tree(tree, root, 1, 1, max_depth)
+    root.right = grow_tree(tree, root, 2, 1, max_depth)
+    
+    tree.node_count = count_children(root)
 
     return tree
 

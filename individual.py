@@ -27,10 +27,10 @@ class Individual:
         window_start_index = 35  # Start when signal and histogram are no longer NaN (26 + 9)
         window_end_index = 55  # 20 rows at at time (for 3m intervals, this is a 60min window)
 
-        df_window = df.iloc[window_start_index:window_end_index]
-        if df_window.size <= 0:
+        if df is None or df.size <= 0:
             print("DataFrame ERROR! Returning starting balance $", balance)
             return balance
+        df_window = df.iloc[window_start_index:window_end_index]
 
         return_dict = self.run_code(df_window)
 

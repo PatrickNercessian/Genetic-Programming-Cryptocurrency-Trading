@@ -157,6 +157,8 @@ def test_example_algorithm():
 
     tree = Tree(root)
 
+    print(count_children(root))
+
     crypto_symbol = 'BTCUSDT'
     interval = '1d'
     individual = Individual(tree, crypto_symbol, interval)
@@ -221,11 +223,11 @@ def test_mutation():
 
 
 def test_crossover():
-    tree_1, tree_2 = plant_tree(2), plant_tree(2)
+    tree_1, tree_2 = plant_tree(4), plant_tree(4)
     indiv_1, indiv_2 = Individual(tree_1, 'BTCUSDT', '3m'), Individual(tree_2, 'BTCUSDT', '3m')
     offspring_1, offspring_2 = crossover(indiv_1, indiv_2)
 
-    print(indiv_1.code + '\n\n' + indiv_2.code + '\n\n\n')
+    print('parent 1:\n' + indiv_1.code + '\n\n' + 'parent 2:\n' + indiv_2.code + '\n\n\n')
 
     if offspring_1 is not None:
         print(offspring_1.code + '\n\n')
@@ -246,6 +248,8 @@ def test_population():
         population.evaluate_and_sort()
 
 
-test_example_algorithm()
+if __name__ == '__main__':
+    test_crossover()
+    # test_example_algorithm()
 # test_plant_tree()
 # test_population()

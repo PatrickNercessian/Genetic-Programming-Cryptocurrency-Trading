@@ -4,8 +4,8 @@ import copy
 
 import crypto_data
 import helper
+import tree
 from individual import Individual
-from tree import plant_tree, decode_in_order
 
 
 class Population:
@@ -23,7 +23,7 @@ class Population:
 
         self.individuals = []
         for i in range(pop_size):
-            self.individuals.append(Individual(plant_tree(init_tree_size), crypto_symbol, interval))
+            self.individuals.append(Individual(tree.plant_tree(init_tree_size), crypto_symbol, interval))
 
     def init_dataframes(self, num_dataframes, crypto_symbol, interval):
         self.current_dataframes = []
@@ -38,7 +38,7 @@ class Population:
 
         new_individuals = []
         while len(new_individuals) < self.pop_size:
-            if random.random() < 0.6:  # 80% chance of choosing from the better group
+            if random.random() < 0.6:  # 60% chance of choosing from the better group
                 index_1, index_2 = random.randint(0, cutoff), random.randint(0, cutoff)
                 while index_1 == index_2:
                     index_2 = random.randint(0, cutoff)
@@ -51,11 +51,15 @@ class Population:
                 for i in range(10):  # Try up to 10 times to mutate, if it fails every time, skip
                     new_indiv = mutate(self.individuals[index_1])
                     if new_indiv is not None:
+                        new_indiv.tree.node_count = tree.count_children(new_indiv.tree.root)
                         new_individuals.append(new_indiv)
                         break
             else:
                 for i in range(10):  # Try up to 10 times to crossover, if it fails every time, skip
                     new_indiv_1, new_indiv_2 = crossover(self.individuals[index_1], self.individuals[index_2])
+
+                    new_indiv_1.tree.node_count = tree.count_children(new_indiv_1.tree.root)
+                    new_indiv_2.tree.node_count = tree.count_children(new_indiv_2.tree.root)
 
                     if new_indiv_1 is not None and new_indiv_2 is not None:
                         if len(new_individuals) < self.pop_size - 1:  # if there's room for 2
@@ -141,7 +145,7 @@ def crossover(indiv_1: Individual, indiv_2: Individual):
         else:  # which_child_1 == 2
             parent_1.right = node_2
 
-        indiv_1_copy.code = decode_in_order(indiv_1_copy.tree.root)
+        indiv_1_copy.code = tree.decode_in_order(indiv_1_copy.tree.root)
     else:
         indiv_1_copy = None
 
@@ -155,7 +159,7 @@ def crossover(indiv_1: Individual, indiv_2: Individual):
         else:  # which_child_2 == 2
             parent_2.right = node_1
 
-        indiv_2_copy.code = decode_in_order(indiv_2_copy.tree.root)
+        indiv_2_copy.code = tree.decode_in_order(indiv_2_copy.tree.root)
 
     else:
         indiv_2_copy = None
@@ -169,7 +173,7 @@ def mutate(indiv):
     node, parent, which_child = indiv_copy.tree.random_node(indiv_copy.tree.root)
     expected_types = indiv_copy.tree.get_expected(parent, which_child)
 
-    random_subtree = plant_tree(2)  # TODO tweak max_depth parameter
+    random_subtree = tree.plant_tree(2)  # TODO tweak max_depth parameter
 
     # TODO merge var_type lists of existing tree and new subtree
 
@@ -185,10 +189,10 @@ def mutate(indiv):
             parent.left = random_subtree.root
         elif which_child == 1:
             parent.middle = random_subtree.root
-        else:  # which_child_1 == 2
+        else:  # which_child == 2
             parent.right = random_subtree.root
             
-        indiv_copy.code = decode_in_order(indiv_copy.tree.root)
+        indiv_copy.code = tree.decode_in_order(indiv_copy.tree.root)
 
         return indiv_copy
     else:
