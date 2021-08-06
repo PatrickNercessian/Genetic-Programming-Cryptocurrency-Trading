@@ -1,3 +1,4 @@
+import crypto_data
 from crypto_data import *
 from individual import Individual
 from population import Population, mutate, crossover
@@ -57,17 +58,135 @@ def test_tree():
     print('\n\n' + code + '\n\n')
     exec(code)
 
+def decision_example1(recent_rsi):
+    if recent_rsi < 30:
+        should_buy = True
+        confidence = (30 - recent_rsi) / 30
+    elif recent_rsi > 70:
+        should_buy = False
+        confidence = (recent_rsi - 70) / 30
+
+def test_example_algorithm():
+    if_node = Node('if ___:', 1)
+
+    less = Node('<', 2)
+    less.left = Node('recent_rsi', 3)
+    less.right = Node('30', 3)
+
+    if_node.middle = less
+
+    block = Node('if-elif-block', 2)
+    if_node.right = block
+
+    line1 = Node('\n', 3)
+    block.middle = line1
+
+    equals1 = Node('=', 4)
+    equals1.left = Node('should_buy', 5)
+    equals1.right = Node('True', 5)
+    line1.left = equals1
+
+    line2 = Node('\n', 4)
+    line1.right = line2
+
+    equals2 = Node('=', 5)
+    line2.left = equals2
+    equals2.left = Node('v0', 6)
+    minus = Node('-', 6)
+    equals2.right = minus
+    minus.left = Node('30', 7)
+    minus.right = Node('recent_rsi', 7)
+
+    equals3 = Node('=', 5)
+    line2.right = equals3
+    equals3.left = Node('confidence', 6)
+    divide = Node('/', 6)
+    equals3.right = divide
+    divide.left = Node('v0', 7)
+    divide.right = Node('20', 7)
+
+
+
+
+
+
+
+    elif_node = Node('elif ___:', 3)
+    block.right = elif_node
+
+    zgreater = Node('>', 4)
+    zgreater.left = Node('recent_rsi', 5)
+    zgreater.right = Node('60', 5)
+
+    elif_node.middle = zgreater
+
+    zblock = Node('if-elif-block', 4)
+    elif_node.right = zblock
+
+    zline1 = Node('\n', 5)
+    zblock.middle = zline1
+    zblock.right = Node('nothing', 5)
+
+    zequals1 = Node('=', 6)
+    zequals1.left = Node('should_buy', 7)
+    zequals1.right = Node('False', 7)
+    zline1.left = zequals1
+
+    zline2 = Node('\n', 6)
+    zline1.right = zline2
+
+    zequals2 = Node('=', 7)
+    zline2.left = zequals2
+    zequals2.left = Node('v0', 8)
+    zminus = Node('-', 8)
+    zequals2.right = zminus
+    zminus.left = Node('recent_rsi', 9)
+    zminus.right = Node('60', 9)
+
+    zequals3 = Node('=', 8)
+    zline2.right = zequals3
+    zequals3.left = Node('confidence', 9)
+    zdivide = Node('/', 9)
+    zequals3.right = zdivide
+    zdivide.left = Node('v0', 10)
+    zdivide.right = Node('20', 10)
+
+    root = if_node
+    code = decode_in_order(root)
+    print('\n\n' + code + '\n\n')
+
+    tree = Tree(root)
+
+    print(count_children(root))
+
+    crypto_symbol = 'BTCUSDT'
+    interval = '1d'
+    individual = Individual(tree, crypto_symbol, interval)
+
+    sum = 0
+    num_runs = 30
+    for i in range(num_runs):
+        balance = individual.evaluate(crypto_data.get_random_df(crypto_symbol, interval))
+        print('Balance:', balance)
+        sum += balance
+    print('Fitness:', sum / num_runs)
+
 
 def test1():
     tree = plant_tree(2)
-    individual = Individual(tree, 'BTCUSDT', '3m')
-    individual.evaluate()
+    crypto_symbol = 'BTCUSDT'
+    interval = '3m'
+    individual = Individual(tree, crypto_symbol, interval)
+    individual.evaluate(crypto_data.get_random_df(crypto_symbol, interval))
     
 
 def test_plant_tree():
-    for i in range(30):
-        tree = plant_tree(2)
+    # for i in range(30):
+        tree = plant_tree(4)
+        print(count_children(tree.root))
         print(decode_in_order(tree.root), '\n\n')
+        print(get_used_variables(tree.root))
+        print()
 
 
 def test_crypto_data():
@@ -93,6 +212,37 @@ def test3():
 def test_create_folder():
     helper.create_run_folder()
 
+def test_confidence_bool():
+    # WORKS:
+    a = Node('=', 0)
+    a.left = Node('confidence', 1)
+    b = Node('<=', 1)
+    a.right = b
+    b.left = Node('recent_rsi', 2)
+    b.right = Node('5', 2)
+
+    tree = Tree(a)
+    indiv = Individual(tree, 'BTCUSDT', '1d')
+    indiv.evaluate([crypto_data.get_random_df('BTCUSDT', '1d'), crypto_data.get_random_df('BTCUSDT', '1d')])
+
+
+
+    # But this one doesn't work
+    # a = Node('=', 0)
+    # a.left = Node('confidence', 1)
+    # b = Node('<=', 1)
+    # a.right = b
+    # b.left = Node('recent_rsi', 2)
+    #
+    # c = Node('==', 2)
+    # b.right = c
+    # c.left = Node('-258', 3)
+    # c.right = Node('confidence', 3)
+    #
+    # tree = Tree(a)
+    # indiv = Individual(tree, 'BTCUSDT', '1d')
+    # indiv.evaluate([crypto_data.get_random_df('BTCUSDT', '1d')])
+
 
 def test_mutation():
     tree = plant_tree(2)
@@ -105,11 +255,11 @@ def test_mutation():
 
 
 def test_crossover():
-    tree_1, tree_2 = plant_tree(2), plant_tree(2)
+    tree_1, tree_2 = plant_tree(4), plant_tree(4)
     indiv_1, indiv_2 = Individual(tree_1, 'BTCUSDT', '3m'), Individual(tree_2, 'BTCUSDT', '3m')
     offspring_1, offspring_2 = crossover(indiv_1, indiv_2)
 
-    print(indiv_1.code + '\n\n' + indiv_2.code + '\n\n\n')
+    print('parent 1:\n' + indiv_1.code + '\n\n' + 'parent 2:\n' + indiv_2.code + '\n\n\n')
 
     if offspring_1 is not None:
         print(offspring_1.code + '\n\n')
@@ -123,12 +273,47 @@ def test_crossover():
 
 
 def test_population():
-    population = Population('BTCUSDT', '3m', pop_size=1000)
+    population = Population('BTCUSDT', '1d', pop_size=1000, num_dataframes=3)
     population.evaluate_and_sort()
-    for i in range(3):
+    for i in range(10):
         population.next_gen()
         population.evaluate_and_sort()
 
 
-# test_tree()
-test_population()
+if __name__ == '__main__':
+    # test_crossover()
+    # test_example_algorithm()
+    # test_plant_tree()
+    test_population()
+    # test_confidence_bool()
+    # x = 3 > 5 <= 12
+    # y = 30 <= -258 == 1.0
+    # print(type(x))
+    # print(type(y))
+
+    # x = True
+    # import random
+    # p = random.random()
+    # if p * 3 < True:
+    #     print('yes', p)
+    # else:
+    #     print('no', p)
+
+
+    # var_name_list = ['recent_rsi', 'confidence', 'v0', 'v1']
+    # import time
+    # start = time.time()
+    # rand = random.choice(var_name_list)
+    # while rand == 'recent_rsi':
+    #     print('yuhhhhhhhhhhhhh')
+    #     rand = random.choice(var_name_list)
+    # first_time = time.time() - start
+    # print('First took', first_time, 'seconds')
+    #
+    # start = time.time()
+    # new_list = [x for x in var_name_list if x != 'recent_rsi']
+    # rand = random.choice(new_list)
+    # second_time = time.time() - start
+    # print('Second took', second_time, 'seconds')
+    #
+    # print('First was faster by', second_time - first_time, 'seconds')

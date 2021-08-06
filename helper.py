@@ -1,5 +1,6 @@
 import os
 
+
 def get_interval_in_min(interval: str):
     if interval.endswith('m'):
         return int(interval[:-1])

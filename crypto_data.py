@@ -106,15 +106,17 @@ def get_random_df(crypto_symbol, interval):
         )
         data_end_time = data_start_time + (65 * helper.get_interval_in_min(interval) * 60 * 1000)  # 65 total rows
 
-        df = add_indicators(
-            get_crypto_data_online('btc_bars.csv', client, crypto_symbol, interval,
-                                   data_start_time, data_end_time)
-        )
+        df = None
+        while df is None or df.size <= 0:
+            df = add_indicators(
+                get_crypto_data_online('btc_bars.csv', client, crypto_symbol, interval, data_start_time, data_end_time)
+            )
         print(df)
         return df
     except:
         print(traceback.print_exc())
-        get_random_df(crypto_symbol, interval)  # Definite possibility for infinite recursion, but no solution to that
+        # Definite possibility for infinite recursion, but no solution to that
+        return get_random_df(crypto_symbol, interval)
 
 
 def add_indicators(csv_df: pd.DataFrame):
