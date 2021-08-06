@@ -182,9 +182,10 @@ def test1():
 
 def test_plant_tree():
     # for i in range(30):
-        tree = plant_tree(2)
+        tree = plant_tree(4)
         print(count_children(tree.root))
         print(decode_in_order(tree.root), '\n\n')
+        print(get_used_variables(tree.root))
         print()
 
 
@@ -210,6 +211,37 @@ def test3():
 
 def test_create_folder():
     helper.create_run_folder()
+
+def test_confidence_bool():
+    # WORKS:
+    a = Node('=', 0)
+    a.left = Node('confidence', 1)
+    b = Node('<=', 1)
+    a.right = b
+    b.left = Node('recent_rsi', 2)
+    b.right = Node('5', 2)
+
+    tree = Tree(a)
+    indiv = Individual(tree, 'BTCUSDT', '1d')
+    indiv.evaluate([crypto_data.get_random_df('BTCUSDT', '1d'), crypto_data.get_random_df('BTCUSDT', '1d')])
+
+
+
+    # But this one doesn't work
+    # a = Node('=', 0)
+    # a.left = Node('confidence', 1)
+    # b = Node('<=', 1)
+    # a.right = b
+    # b.left = Node('recent_rsi', 2)
+    #
+    # c = Node('==', 2)
+    # b.right = c
+    # c.left = Node('-258', 3)
+    # c.right = Node('confidence', 3)
+    #
+    # tree = Tree(a)
+    # indiv = Individual(tree, 'BTCUSDT', '1d')
+    # indiv.evaluate([crypto_data.get_random_df('BTCUSDT', '1d')])
 
 
 def test_mutation():
@@ -241,7 +273,7 @@ def test_crossover():
 
 
 def test_population():
-    population = Population('BTCUSDT', '1d', pop_size=1000)
+    population = Population('BTCUSDT', '1d', pop_size=1000, num_dataframes=3)
     population.evaluate_and_sort()
     for i in range(10):
         population.next_gen()
@@ -253,3 +285,35 @@ if __name__ == '__main__':
     # test_example_algorithm()
     # test_plant_tree()
     test_population()
+    # test_confidence_bool()
+    # x = 3 > 5 <= 12
+    # y = 30 <= -258 == 1.0
+    # print(type(x))
+    # print(type(y))
+
+    # x = True
+    # import random
+    # p = random.random()
+    # if p * 3 < True:
+    #     print('yes', p)
+    # else:
+    #     print('no', p)
+
+
+    # var_name_list = ['recent_rsi', 'confidence', 'v0', 'v1']
+    # import time
+    # start = time.time()
+    # rand = random.choice(var_name_list)
+    # while rand == 'recent_rsi':
+    #     print('yuhhhhhhhhhhhhh')
+    #     rand = random.choice(var_name_list)
+    # first_time = time.time() - start
+    # print('First took', first_time, 'seconds')
+    #
+    # start = time.time()
+    # new_list = [x for x in var_name_list if x != 'recent_rsi']
+    # rand = random.choice(new_list)
+    # second_time = time.time() - start
+    # print('Second took', second_time, 'seconds')
+    #
+    # print('First was faster by', second_time - first_time, 'seconds')

@@ -2,11 +2,13 @@ import helper
 from tree import *
 
 from binance.client import Client
+import statistics
 import time
 import multiprocessing
 import traceback
+import numpy
 
-TIMEOUT = 1.5  # seconds
+TIMEOUT = 0.5  # seconds
 
 
 class Individual:
@@ -20,40 +22,21 @@ class Individual:
         self.code = decode_in_order(self.tree.root)
         self.fitness = 0  # AKA how much money we ended up with
 
-    def evaluate(self, df):  # TODO penalize bloated trees
+    def evaluate(self, df_list):  # TODO penalize bloated trees
         print('\n' + self.code + '\n')
-        balance = 1000.00  # starting balance
 
-        window_start_index = 35  # Start when signal and histogram are no longer NaN (26 + 9)
-        window_end_index = 55  # 20 rows at at time (for 3m intervals, this is a 60min window)
+        confidence_vals = []
+        sum_balances = 0
 
-        # if df is None or df.size <= 0:
-        #     print("DataFrame ERROR! Returning starting balance $", balance)
-        #     return balance
-        df_window = df.iloc[window_start_index:window_end_index]
+        for df in df_list:
+            coins_owned = 0.0
+            usd_owned = 1000.00  # starting balance
 
-        return_dict = self.run_code(df_window)
+            window_start_index = 34  # Start when signal and histogram are no longer NaN (26 + 9)
+            window_end_index = 54  # 20 rows at a time (for 3m intervals, this is a 60min window)
+            df_window = df.iloc[window_start_index:window_end_index]  # only here to initialize df_window out of 'while'
 
-        # print(return_dict['recent_rsi'])
-
-        if return_dict['exception_occurred']:
-            print('Exception occurred... Fitness defaulted to 0.')
-            return 0
-
-        if return_dict['should_buy'] is None:# or return_dict['confidence'] is None or return_dict['stop_loss'] is None:
-            print("Didn't make a decision")
-            # return balance / 2
-
-        if return_dict['should_buy'] and return_dict['confidence'] > 0:
-            dollars_to_spend = balance * return_dict['confidence']
-            balance -= dollars_to_spend
-            amount_owned = dollars_to_spend / df_window.close[-1]
-            print('Bought', amount_owned, self.crypto_symbol, 'for $' + str(dollars_to_spend))
-
-            original_stop_loss = return_dict['stop_loss']
-
-            while return_dict['should_buy'] and window_end_index < len(df):
-                # print('Holding...', str(return_dict))
+            while window_end_index < len(df):
                 window_start_index += 1
                 window_end_index += 1
                 df_window = df.iloc[window_start_index:window_end_index]
@@ -63,28 +46,37 @@ class Individual:
                     print('Exception occurred... Fitness defaulted to 0.')
                     return 0
 
-                if df_window.close[-1] < original_stop_loss:
-                    print('Stop Loss at (' + str(original_stop_loss) + ') triggered')
-                    break
+                confidence_vals.append(return_dict['confidence'])
+                coins_owned, usd_owned = update_holdings(coins_owned, usd_owned,
+                                                         return_dict['confidence'], df_window.close[-1])
 
-            dollars_to_receive = amount_owned * df_window.close[-1]
-            print('Sold', amount_owned, self.crypto_symbol, 'for $' + str(dollars_to_receive))
-            balance += amount_owned * df_window.close[-1]
-        else:
-            print('Did not buy.')
+            portfolio_balance = (coins_owned * df_window.close[-1]) + usd_owned
 
-        return balance
+            print("Total Portfolio Balance in USD: $", portfolio_balance)
+            print("Holdings:", '$' + str(usd_owned) + ',', str(coins_owned) + self.crypto_symbol)
+
+            sum_balances += portfolio_balance
+
+        # stdev = statistics.stdev(confidence_vals)
+        # fitness = sum_balances * (1 + stdev) / len(df_list)
+
+        # 2/10 distinct vals: 1.01       3/10 distinct: 1.02       4/10 distinct: 1.03...   ...10/10 distinct: 1.09
+        multiplier = 1 + (len(set(confidence_vals))-1) / pow(len(confidence_vals), 2)
+        fitness = sum_balances * multiplier / len(df_list)
+        print('Fitness:', fitness)
+        # print("Standard Deviation:", stdev)
+        return fitness
 
     def run_code(self, df_window):
         recent_rsi = df_window.rsi[-1]
-        should_buy, stop_loss, confidence = True, 0.0, 1.0
 
         manager = multiprocessing.Manager()
         return_dict = manager.dict()
 
         # TODO give entire dataframe, not just recent RSI
-        return_dict.update({'recent_rsi': recent_rsi, 'should_buy': None, 'stop_loss': 0.0,
-                            'confidence': 1.0, 'exception_occurred': False})
+        # return_dict.update({'recent_rsi': recent_rsi, 'should_buy': None, 'stop_loss': 0.0,
+        #                     'confidence': 1.0, 'exception_occurred': False})
+        return_dict.update({'recent_rsi': recent_rsi, 'confidence': 1.0, 'exception_occurred': False})
 
         process = multiprocessing.Process(target=thread_run, args=(self.code, return_dict))
         process.start()
@@ -95,15 +87,14 @@ class Individual:
                 process.terminate()
                 print('Code timed out...')
                 return_dict['exception_occurred'] = True
-            time.sleep(0.01)  # TODO this may be slowing down evaluation
+            time.sleep(0.001)  # TODO this may be slowing down evaluation
 
         if return_dict['confidence'] is None:
-            return_dict['confidence'] = 1.0
+            return_dict['confidence'] = 0.0
+        elif isinstance(return_dict['confidence'], numpy.bool_):
+            return_dict['confidence'] = max(min(float(return_dict['confidence']), 1.0), 0.0)
         else:
             return_dict['confidence'] = max(min(return_dict['confidence'], 1.0), 0.0)
-
-        if return_dict['stop_loss'] is None:
-            return_dict['stop_loss'] = 0.0
 
         return return_dict
 
@@ -112,11 +103,21 @@ def thread_run(code, return_dict):
     env = dict(return_dict)  # Because return_dict is some dict wrapper from manager.dict()
 
     try:
-        # print('pre env', env)
         exec(code, env)
-        # print('post env', env)
         return_dict.update(env)
         del return_dict['__builtins__']
     except:
         print(traceback.print_exc())
         return_dict['exception_occurred'] = True
+
+
+def update_holdings(coins_owned, usd_owned, confidence, closing_price):
+    coins_owned_usd = coins_owned * closing_price
+    desired_usd_investment = (usd_owned + coins_owned_usd) * confidence
+
+    difference_usd = coins_owned_usd - desired_usd_investment
+    difference_coins = - difference_usd / closing_price
+    coins_owned += difference_coins
+    usd_owned += difference_usd
+
+    return coins_owned, usd_owned

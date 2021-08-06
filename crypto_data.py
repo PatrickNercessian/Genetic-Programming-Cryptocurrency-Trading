@@ -115,7 +115,8 @@ def get_random_df(crypto_symbol, interval):
         return df
     except:
         print(traceback.print_exc())
-        get_random_df(crypto_symbol, interval)  # Definite possibility for infinite recursion, but no solution to that
+        # Definite possibility for infinite recursion, but no solution to that
+        return get_random_df(crypto_symbol, interval)
 
 
 def add_indicators(csv_df: pd.DataFrame):
