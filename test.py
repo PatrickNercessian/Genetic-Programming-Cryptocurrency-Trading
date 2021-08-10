@@ -244,18 +244,9 @@ def test_mutation():
         tree = plant_tree(5)
         indiv = Individual(tree, 'BTCUSDT', '3m')
         mutated_indiv = mutate(indiv)
-        for i in range(10):
-            if mutated_indiv is None:
-                print('Failed mutation once...')
-                mutated_indiv = mutate(indiv)
-            else:
-                break
-        if mutated_indiv is None:
-            print('Failed mutation 10 times, continuing...')
-            continue
         print('OG Indiv:\n' + indiv.code)
         print('\n\nMutated Indiv:\n' + mutated_indiv.code)
-        print('\n\n\n\n')
+        print('\n\n\n')
 
 
 def test_crossover():
@@ -277,7 +268,7 @@ def test_crossover():
 
 
 def test_population():
-    population = Population('BTCUSDT', '1d')
+    population = Population('BTCUSDT', '1d', pop_size=50)
     population.run()
 
 
@@ -285,8 +276,8 @@ if __name__ == '__main__':
     # test_crossover()
     # test_example_algorithm()
     # test_plant_tree()
-    # test_population()
-    test_mutation()
+    test_population()
+    # test_mutation()
     # test_confidence_bool()
     # x = 3 > 5 <= 12
     # y = 30 <= -258 == 1.0

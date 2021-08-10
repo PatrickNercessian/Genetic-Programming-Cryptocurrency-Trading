@@ -126,10 +126,10 @@ def init_dataframes(num_dataframes, crypto_symbol, interval):
 
 
 def crossover(indiv_1: Individual, indiv_2: Individual):
-    # TODO issue where part of the expectation is coded in grow_tree() function, either move all to get_expectation
+    # TODO issue where part of the expectation is coded in grow_branch() function, either move all to get_expectation
     # TODO or just copy that code here too
 
-    # TODO maybe the above is wrong, don't need the expectations that are in grow_tree()
+    # TODO maybe the above is wrong, don't need the expectations that are in grow_branch()
 
     indiv_1_copy, indiv_2_copy = copy.deepcopy(indiv_1), copy.deepcopy(indiv_2)
 
@@ -191,37 +191,30 @@ def crossover(indiv_1: Individual, indiv_2: Individual):
 def mutate(indiv: Individual):
     indiv_copy = copy.deepcopy(indiv)
 
-    node, parent, which_child = indiv_copy.tree.select_random_node(indiv_copy.tree.root)
+    old_node, parent, which_child = indiv_copy.tree.select_random_node(indiv_copy.tree.root)
     expected_types, _ = indiv_copy.tree.get_expected(parent, which_child)
-
-    # TODO tweak max_depth parameter
-    # TODO pass in indiv's var_list and allow plant_tree to use those vars while growing
-    #                                                               (maybe just grow the original tree from random node)
-    random_subtree = tree.plant_tree(indiv.tree.max_depth, current_depth=node.depth)
 
     possible_set = []
     for i in expected_types:
         possible_set.extend(i)
 
-    if random_subtree.root.value in possible_set:
-        node = random_subtree.root
+    new_node = Node(random.choice(possible_set), old_node.depth)
 
-        if parent is None:
-            indiv_copy.tree = random_subtree
-        elif which_child == 0:
-            parent.left = node
-        elif which_child == 1:
-            parent.middle = node
-        else:  # which_child == 2
-            parent.right = node
+    if parent is None:  # if replacing root
+        indiv_copy.tree = tree.plant_tree(indiv_copy.tree.max_depth)
+    elif which_child == 0:
+        parent.left = new_node
+    elif which_child == 1:
+        parent.middle = new_node
+    else:  # which_child == 2
+        parent.right = new_node
 
-        indiv_copy.code = tree.decode_in_order(indiv_copy.tree.root)
-        indiv_copy.tree.node_count = tree.count_children(indiv_copy.tree.root)
-        merge_var_lists(node, indiv_copy.tree, random_subtree)
+    indiv_copy.tree.grow_tree(new_node, indiv_copy.tree.max_depth, new_node.depth)
 
-        return indiv_copy
-    else:
-        return None
+    indiv_copy.code = tree.decode_in_order(indiv_copy.tree.root)
+    indiv_copy.tree.node_count = tree.count_children(indiv_copy.tree.root)
+
+    return indiv_copy
 
 
 def merge_var_lists(implant_node: Node, vary_tree: Tree, original_tree: Tree):

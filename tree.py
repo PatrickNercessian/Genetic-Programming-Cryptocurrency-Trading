@@ -38,59 +38,89 @@ class Tree:
         self.bool_var_names = []
         self.list_var_names = []  # TODO irrelevant for now since for loops were taken out
 
-    def new_var(self):  # TODO tentative issue of creating new var with same name as temporary var from for loop
-        last_var_name: str = self.var_name_list[-1]
-        if last_var_name.startswith('v'):
-            new_var_name = 'v' + str(int(last_var_name[1:]) + 1)
-        else:
-            new_var_name = 'v0'
+    def grow_tree(self, parent: Node, max_depth: int, current_depth=0):
+        parent.left = self.grow_branch(parent, 0, current_depth + 1, max_depth)
+        parent.middle = self.grow_branch(parent, 1, current_depth + 1, max_depth)
+        parent.right = self.grow_branch(parent, 2, current_depth + 1, max_depth)
 
+    def grow_branch(self, parent: Node, which_child, depth: int, max_depth: int):
         p = random.random()
-        if p < 0.34:
-            v = Variable(new_var_name, float, -200.0, 200.0)  # TODO arbitrary limits, may tweak
-        elif p < 0.67:
-            v = Variable(new_var_name, int, -200, 200)  # TODO arbitrary limits, may tweak
-        else:
-            v = Variable(new_var_name, bool, False, True)
 
-        return v
+        if parent.value == '=' and which_child == 0:  # if assigning variable
+            if p < (1 / (len(self.var_name_list) + 1)):  # Chance to create new variable
+                new_var = self.new_var()
+                self.append_var(new_var)
+                return Node(new_var.name, depth)
+            else:
+                temp_list = [x for x in self.var_name_list if x != 'recent_rsi']  # Tested: faster than loop re-choosing
+                return Node(random.choice(temp_list), depth)
+        # elif parent.value == 'in' and which_child == 0:  # always create new variable left of 'in'
+        #     new_var = tree.new_var()
+        #     tree.append_var(new_var)
+        #     return Node(new_var.name, depth)
 
-    def append_var(self, var: Variable):
-        self.var_list.append(var)
-        self.var_name_list.append(var.name)
-        if var.v_type == float:
-            self.float_var_names.append(var.name)
-        elif var.v_type == int:
-            self.int_var_names.append(var.name)
-        elif var.v_type == bool:
-            self.bool_var_names.append(var.name)
+        expected_types, expected_variable_types = self.get_expected(parent, which_child, grow_freely=depth < max_depth)
+        is_float_allowed = float in expected_variable_types
+        is_int_allowed = int in expected_variable_types
+        is_bool_allowed = bool in expected_variable_types
 
-    def select_random_node(self, node: Node, parent: Node = None, which_child: int = None):
-        p = random.random()
-        # if node is None:  # Restart if you never selected a node
-        #     return self.random_node(self.root)
-        if p < (node.depth / self.node_count):
-            return node, parent, which_child
+        num_allowed = is_float_allowed + is_int_allowed + is_bool_allowed
 
-        possible_paths = []
-        if node.left:
-            possible_paths.append(0)
-        if node.middle:
-            possible_paths.append(1)
-        if node.right:
-            possible_paths.append(2)
+        is_function_required = not num_allowed or (parent.value in ['if ___:', 'elif ___:', 'while ___:']
+                                                   and not self.bool_var_names)
+        if depth < max_depth or is_function_required:  # allow depth to exceed max if function children are required
+            possible_set = []
+            for i in expected_types:
+                possible_set.extend(i)
 
-        if not possible_paths:  # if terminal node with no children
-            return self.select_random_node(self.root)
+            if possible_set:
+                node = Node(random.choice(possible_set), depth)
 
-        rand_path = random.choice(possible_paths)
+                num_allowed = is_float_allowed + is_int_allowed + is_bool_allowed
+                # 50% chance of random constant if a variable is acceptable and parent isn't 'if', 'elif', or 'while'
+                if p < 0.5 and num_allowed and parent.value not in ['if ___:', 'elif ___:', 'while ___:']:
+                    rand = random.random() * num_allowed
+                    # (1 / num_allowed)% probability of executing if float allowed, 0% probability if not
+                    if rand < is_float_allowed:
+                        node = Node(str(random.gauss(0, 100)), depth)
+                    elif rand < is_float_allowed + is_int_allowed:  # same probability of above
+                        node = Node(str(int(random.gauss(0, 100))), depth)
+                    else:  # elif rand < is_float_allowed + is_int_allowed + is_bool_allowed
+                        node = Node(str(random.choice([True, False])), depth)  # same probability as above
 
-        if rand_path == 0:
-            return self.select_random_node(node.left, node, 0)
-        elif rand_path == 1:
-            return self.select_random_node(node.middle, node, 1)
-        elif rand_path == 2:
-            return self.select_random_node(node.right, node, 2)
+                # if depth + 1 > tree.highest_depth:
+                #     tree.highest_depth = depth + 1
+
+                node.left = self.grow_branch(node, 0, depth + 1, max_depth)
+                node.middle = self.grow_branch(node, 1, depth + 1, max_depth)
+                node.right = self.grow_branch(node, 2, depth + 1, max_depth)
+                return node
+            else:  # parent was terminal node
+                return None
+        else:  # reached max depth, and terminal node is allowed here
+            rand = random.random() * (is_float_allowed + is_int_allowed + is_bool_allowed)
+
+            # (1 / num allowed types)% chance of executing if float allowed, 0% chance if not
+            if rand < is_float_allowed:
+                if p < 0.5:  # 50% chance of random float variable
+                    return Node(random.choice(self.float_var_names), depth)
+                else:  # 50% chance of float constant
+                    return Node(str(random.gauss(0, 100)), depth)
+
+            # (1 / num allowed types)% chance of executing if int allowed, 0% chance if not
+            elif rand < is_float_allowed + is_int_allowed:
+                if p < 0.5 and self.int_var_names:  # 50% chance of random int variable if one exists
+                    return Node(random.choice(self.int_var_names), depth)
+                else:  # 50% chance of int constant
+                    return Node(str(int(random.gauss(0, 100))), depth)
+
+            # (1 / num allowed types)% chance of executing if bool allowed, 0% chance if not
+            else:  # elif rand < is_float_allowed + is_int_allowed + is_bool_allowed:
+                # 50% chance of random bool variable (100% chance if parent is 'if', 'elif', or 'while')
+                if p < 0.5 and self.bool_var_names or parent.value in ['if ___:', 'elif ___:', 'while ___:']:
+                    return Node(random.choice(self.bool_var_names), depth)
+                else:  # 50% chance of random bool constant (0% chance if parent is 'if', 'elif', or 'while')
+                    return Node(str(random.choice([True, False])), depth)
 
     #  which_child: 0 for left child, 1 for middle child, 2 for right child
     def get_expected(self, parent: Node, which_child: int, grow_freely=True):
@@ -243,6 +273,60 @@ class Tree:
 
         return expected_types, expected_variable_types
 
+    def new_var(self):  # TODO tentative issue of creating new var with same name as temporary var from for loop
+        last_var_name: str = self.var_name_list[-1]
+        if last_var_name.startswith('v'):
+            new_var_name = 'v' + str(int(last_var_name[1:]) + 1)
+        else:
+            new_var_name = 'v0'
+
+        p = random.random()
+        if p < 0.34:
+            v = Variable(new_var_name, float, -200.0, 200.0)  # TODO arbitrary limits, may tweak
+        elif p < 0.67:
+            v = Variable(new_var_name, int, -200, 200)  # TODO arbitrary limits, may tweak
+        else:
+            v = Variable(new_var_name, bool, False, True)
+
+        return v
+
+    def append_var(self, var: Variable):
+        self.var_list.append(var)
+        self.var_name_list.append(var.name)
+        if var.v_type == float:
+            self.float_var_names.append(var.name)
+        elif var.v_type == int:
+            self.int_var_names.append(var.name)
+        elif var.v_type == bool:
+            self.bool_var_names.append(var.name)
+
+    def select_random_node(self, node: Node, parent: Node = None, which_child: int = None):
+        p = random.random()
+        # if node is None:  # Restart if you never selected a node
+        #     return self.random_node(self.root)
+        if p < (node.depth / self.node_count):
+            return node, parent, which_child
+
+        possible_paths = []
+        if node.left:
+            possible_paths.append(0)
+        if node.middle:
+            possible_paths.append(1)
+        if node.right:
+            possible_paths.append(2)
+
+        if not possible_paths:  # if terminal node with no children
+            return self.select_random_node(self.root)
+
+        rand_path = random.choice(possible_paths)
+
+        if rand_path == 0:
+            return self.select_random_node(node.left, node, 0)
+        elif rand_path == 1:
+            return self.select_random_node(node.middle, node, 1)
+        elif rand_path == 2:
+            return self.select_random_node(node.right, node, 2)
+
 
 def count_children(node: Node):
     if node:
@@ -300,98 +384,15 @@ def decode_in_order(node: Node, num_indentations=0):
     return ''
 
 
-def plant_tree(max_depth: int, current_depth=0):
-    root = Node(random.choice(line_type), depth=current_depth)  # TODO right now, line_type is only '\n'
-    tree = Tree(root)
+def plant_tree(max_depth: int):
+    # root = Node(random.choice(line_type), depth=0)
+    tree = Tree(Node('\n', depth=0))  # right now, line_type is only '\n'
     tree.max_depth = max_depth
 
-    root.left = grow_tree(tree, root, 0, current_depth, max_depth)
-    root.middle = grow_tree(tree, root, 1, current_depth, max_depth)
-    root.right = grow_tree(tree, root, 2, current_depth, max_depth)
-
-    tree.node_count = count_children(root)
+    tree.grow_tree(tree.root, max_depth)
+    tree.node_count = count_children(tree.root)
 
     return tree
-
-
-def grow_tree(tree: Tree, parent: Node, which_child, depth: int, max_depth: int):
-    p = random.random()
-
-    if parent.value == '=' and which_child == 0:  # if assigning variable
-        if p < (1 / (len(tree.var_name_list) + 1)):  # Chance to create new variable
-            new_var = tree.new_var()
-            tree.append_var(new_var)
-            return Node(new_var.name, depth)
-        else:
-            temp_list = [x for x in tree.var_name_list if x != 'recent_rsi']  # Tested: faster than loop re-choosing
-            return Node(random.choice(temp_list), depth)
-    # elif parent.value == 'in' and which_child == 0:  # always create new variable left of 'in'
-    #     new_var = tree.new_var()
-    #     tree.append_var(new_var)
-    #     return Node(new_var.name, depth)
-
-    expected_types, expected_variable_types = tree.get_expected(parent, which_child, grow_freely=depth < max_depth)
-    is_float_allowed = float in expected_variable_types
-    is_int_allowed = int in expected_variable_types
-    is_bool_allowed = bool in expected_variable_types
-
-    num_allowed = is_float_allowed + is_int_allowed + is_bool_allowed
-
-    is_function_required = not num_allowed or (parent.value in ['if ___:', 'elif ___:', 'while ___:']
-                                               and not tree.bool_var_names)
-    if depth < max_depth or is_function_required:  # allow depth to exceed max if function children are required
-        possible_set = []
-        for i in expected_types:
-            possible_set.extend(i)
-
-        if possible_set:
-            node = Node(random.choice(possible_set), depth)
-
-            num_allowed = is_float_allowed + is_int_allowed + is_bool_allowed
-            # 50% chance of random constant if a variable is acceptable and parent isn't 'if', 'elif', or 'while'
-            if p < 0.5 and num_allowed and parent.value not in ['if ___:', 'elif ___:', 'while ___:']:
-                rand = random.random() * num_allowed
-                # (1 / num_allowed)% probability of executing if float allowed, 0% probability if not
-                if rand < is_float_allowed:
-                    node = Node(str(random.gauss(0, 100)), depth)
-                elif rand < is_float_allowed + is_int_allowed:  # same probability of above
-                    node = Node(str(int(random.gauss(0, 100))), depth)
-                else:  # elif rand < is_float_allowed + is_int_allowed + is_bool_allowed
-                    node = Node(str(random.choice([True, False])), depth)  # same probability as above
-
-            # if depth + 1 > tree.highest_depth:
-            #     tree.highest_depth = depth + 1
-
-            node.left = grow_tree(tree, node, 0, depth + 1, max_depth)
-            node.middle = grow_tree(tree, node, 1, depth + 1, max_depth)
-            node.right = grow_tree(tree, node, 2, depth + 1, max_depth)
-            return node
-        else:  # parent was terminal node
-            return None
-    else:  # reached max depth, and terminal node is allowed here
-        rand = random.random() * (is_float_allowed + is_int_allowed + is_bool_allowed)
-
-        # (1 / num allowed types)% chance of executing if float allowed, 0% chance if not
-        if rand < is_float_allowed:
-            if p < 0.5:  # 50% chance of random float variable
-                return Node(random.choice(tree.float_var_names), depth)
-            else:  # 50% chance of float constant
-                return Node(str(random.gauss(0, 100)), depth)
-
-        # (1 / num allowed types)% chance of executing if int allowed, 0% chance if not
-        elif rand < is_float_allowed + is_int_allowed:
-            if p < 0.5 and tree.int_var_names:  # 50% chance of random int variable if one exists
-                return Node(random.choice(tree.int_var_names), depth)
-            else:  # 50% chance of int constant
-                return Node(str(int(random.gauss(0, 100))), depth)
-
-        # (1 / num allowed types)% chance of executing if bool allowed, 0% chance if not
-        else:  # elif rand < is_float_allowed + is_int_allowed + is_bool_allowed:
-            # 50% chance of random bool variable (100% chance if parent is 'if', 'elif', or 'while')
-            if p < 0.5 and tree.bool_var_names or parent.value in ['if ___:', 'elif ___:', 'while ___:']:
-                return Node(random.choice(tree.bool_var_names), depth)
-            else:  # 50% chance of random bool constant (0% chance if parent is 'if', 'elif', or 'while')
-                return Node(str(random.choice([True, False])), depth)
 
 
 def to_string(root: Node):
