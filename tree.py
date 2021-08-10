@@ -245,7 +245,7 @@ class Tree:
             elif parent.value == '=':
                 if which_child == 0:  # TODO This only executes during crossover or mutation
                     expected_variable_types = [float, int, bool]
-                    expected_types = [x for x in self.var_name_list if x != 'recent_rsi']
+                    expected_types = [[x for x in self.var_name_list if x != 'recent_rsi']]
                 elif which_child == 1:
                     expected_types = []
                 elif which_child == 2:

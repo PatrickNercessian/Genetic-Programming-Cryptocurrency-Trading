@@ -1,3 +1,5 @@
+import math
+
 import crypto_data
 from crypto_data import *
 from individual import Individual
@@ -240,8 +242,8 @@ def test_confidence_bool():
 
 
 def test_mutation():
-    for _ in range(10):
-        tree = plant_tree(5)
+    for _ in range(30):
+        tree = plant_tree(3)
         indiv = Individual(tree, 'BTCUSDT', '3m')
         mutated_indiv = mutate(indiv)
         print('OG Indiv:\n' + indiv.code)
@@ -267,6 +269,24 @@ def test_crossover():
         print('Crossover for offspring_2 failed... Likely an invalid subtree was placed')
 
 
+def test_mutated_crossover():
+    tree = plant_tree(4)
+    indiv = Individual(tree, 'BTCUSDT', '3m')
+    print('OG tree:\n' + indiv.code)
+
+    offspring_1, offspring_2 = crossover(indiv, indiv)
+
+    if offspring_1 is not None:
+        print('\n\n1:\n' + offspring_1.code + '\n\n')
+    else:
+        print('Crossover for offspring_1 failed... Likely an invalid subtree was placed')
+
+    if offspring_2 is not None:
+        print('\n\n2:\n' + offspring_2.code + '\n\n')
+    else:
+        print('Crossover for offspring_2 failed... Likely an invalid subtree was placed')
+
+
 def test_population():
     population = Population('BTCUSDT', '1d', pop_size=50)
     population.run()
@@ -276,7 +296,8 @@ if __name__ == '__main__':
     # test_crossover()
     # test_example_algorithm()
     # test_plant_tree()
-    test_population()
+    test_mutated_crossover()
+    # test_population()
     # test_mutation()
     # test_confidence_bool()
     # x = 3 > 5 <= 12

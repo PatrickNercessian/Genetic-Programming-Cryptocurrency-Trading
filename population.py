@@ -190,15 +190,16 @@ def crossover(indiv_1: Individual, indiv_2: Individual):
 
 def mutate(indiv: Individual):
     indiv_copy = copy.deepcopy(indiv)
+    p = random.random()
 
     old_node, parent, which_child = indiv_copy.tree.select_random_node(indiv_copy.tree.root)
-    expected_types, _ = indiv_copy.tree.get_expected(parent, which_child)
 
-    possible_set = []
-    for i in expected_types:
-        possible_set.extend(i)
-
-    new_node = Node(random.choice(possible_set), old_node.depth)
+    new_node = None
+    if p < 0.5:
+        new_node = constant_tweak_mutation(old_node)
+    if p >= 0.5 or not new_node:
+        new_node = random_subtree_mutation(indiv_copy, old_node, parent, which_child)
+        indiv_copy.tree.grow_tree(new_node, indiv_copy.tree.max_depth, new_node.depth)
 
     if parent is None:  # if replacing root
         indiv_copy.tree = tree.plant_tree(indiv_copy.tree.max_depth)
@@ -209,12 +210,52 @@ def mutate(indiv: Individual):
     else:  # which_child == 2
         parent.right = new_node
 
-    indiv_copy.tree.grow_tree(new_node, indiv_copy.tree.max_depth, new_node.depth)
-
     indiv_copy.code = tree.decode_in_order(indiv_copy.tree.root)
     indiv_copy.tree.node_count = tree.count_children(indiv_copy.tree.root)
 
     return indiv_copy
+
+
+def constant_tweak_mutation(old_node):
+    try:
+        # must check int before float (because int can be converted to float)
+        diff = random.gauss(0, 1.0)
+        diff = int(math.floor(diff)) if diff < 0 else int(math.ceil(diff))
+        return Node(str(int(old_node.value) + diff), old_node.depth)
+    except:
+        try:
+            return Node(str(random.gauss(float(old_node.value), 1.0)), old_node.depth)
+        except:
+            if old_node.value in [True, False]:
+                return Node(str(not bool(old_node.value)), old_node.depth)
+
+    return None
+
+
+def random_subtree_mutation(indiv_copy, old_node, parent, which_child):
+    expected_types, _ = indiv_copy.tree.get_expected(parent, which_child)
+
+    possible_set = []
+    for i in expected_types:
+        possible_set.extend(i)
+
+    return Node(random.choice(possible_set), old_node.depth)
+
+
+# TODO possible error where one of the nodes is ancestor of the other, and swapping them causes infinite recursion
+# def swap_subtrees_mutation(indiv_copy, old_node_1, parent_1, which_child_1)
+#     old_node_2, parent_2, which_child_2 = indiv_copy.tree.select_random_node(indiv_copy.tree.root)
+#
+#     expected_types_1, _ = indiv_copy.tree.get_expected(parent_1, which_child_1)
+#     expected_types_2, _ = indiv_copy.tree.get_expected(parent_2, which_child_2)
+#
+#     possible_set_1 = []
+#     for i in expected_types_1:
+#         possible_set_1.extend(i)
+#
+#     possible_set_2 = []
+#     for i in expected_types_2:
+#         possible_set_2.extend(i)
 
 
 def merge_var_lists(implant_node: Node, vary_tree: Tree, original_tree: Tree):
