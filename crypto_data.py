@@ -50,7 +50,7 @@ def setup_testing_client():
     return c
 
 
-def get_crypto_data_online(csv_file: str, c: Client, symbol: str, interval: str, start: Union[str, int], end: Union[str, int] = None):
+def get_crypto_data_online(c: Client, symbol: str, interval: str, start: Union[str, int], end: Union[str, int] = None):
     # request historical candle (klines) data
     bars = c.get_historical_klines(symbol, interval, start_str=start, end_str=end)
 
@@ -60,39 +60,27 @@ def get_crypto_data_online(csv_file: str, c: Client, symbol: str, interval: str,
     df = pd.DataFrame(bars, columns=['date', 'open', 'high', 'low', 'close'])
 
     df.set_index('date', inplace=True)  # Sets the date column AS the row index (rather than 0, 1, 2, 3, etc.)
-    df.to_csv(csv_file)  # Need to save to CSV and load from CSV for some damn reason
+    df.index = pd.to_datetime(df.index, unit='ms')
 
-    csv_df = get_crypto_data_csv(csv_file)
+    # Convert Strings to Floats
+    df['open'] = pd.to_numeric(df.open)
+    df['high'] = pd.to_numeric(df.high)
+    df['low'] = pd.to_numeric(df.low)
+    df['close'] = pd.to_numeric(df.close)
 
-    return csv_df
-
-
-def get_all_crypto_data_online(csv_file: str, symbol: str, interval: str):
-    client = setup_real_client()
-    earliest_time = client._get_earliest_valid_timestamp(symbol, interval)  # interval e.g. '3m'
-
-    return get_crypto_data_online(csv_file, client, symbol, interval, earliest_time)
-
-
-def get_crypto_data_csv(csv_file: str):
     # Just for printing settings
     pd.set_option('display.width', None)
     pd.set_option('display.max_columns', None)
     pd.set_option('display.max_rows', 6)
 
-    csv_df = pd.read_csv(csv_file, index_col=0)
-    csv_df.index = pd.to_datetime(csv_df.index, unit='ms')
+    return df
 
-    # split_date = datetime.datetime(2020, 4, 27)
-    # print(csv_df.loc[csv_df.index <= split_date])
 
-    # Convert Strings to Floats
-    csv_df['open'] = pd.to_numeric(csv_df.open)
-    csv_df['high'] = pd.to_numeric(csv_df.high)
-    csv_df['low'] = pd.to_numeric(csv_df.low)
-    csv_df['close'] = pd.to_numeric(csv_df.close)
+def get_all_crypto_data_online(symbol: str, interval: str):
+    client = setup_real_client()
+    earliest_time = client._get_earliest_valid_timestamp(symbol, interval)  # interval e.g. '3m'
 
-    return csv_df
+    return get_crypto_data_online(client, symbol, interval, earliest_time)
 
 
 def get_random_df(crypto_symbol, interval):
@@ -109,7 +97,7 @@ def get_random_df(crypto_symbol, interval):
         df = None
         while df is None or df.size <= 0:
             df = add_indicators(
-                get_crypto_data_online('btc_bars.csv', client, crypto_symbol, interval, data_start_time, data_end_time)
+                get_crypto_data_online(client, crypto_symbol, interval, data_start_time, data_end_time)
             )
         print(df)
         return df

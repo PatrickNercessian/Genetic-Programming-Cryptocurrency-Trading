@@ -2,7 +2,6 @@ import helper
 from tree import *
 
 from binance.client import Client
-import statistics
 import time
 import multiprocessing
 import traceback
@@ -61,7 +60,11 @@ class Individual:
         # fitness = sum_balances * (1 + stdev) / len(df_list)
 
         # 2/10 distinct vals: 1.01       3/10 distinct: 1.02       4/10 distinct: 1.03...   ...10/10 distinct: 1.09
-        multiplier = 1 + (len(set(confidence_vals))-1) / pow(len(confidence_vals), 2)
+        # multiplier = 1 + (len(set(confidence_vals))-1) / pow(len(confidence_vals), 2)
+
+        multiplier = 1.0
+        if len(set(confidence_vals)) > 1:
+            multiplier = 1.2
         fitness = sum_balances * multiplier / len(df_list)
         print('Fitness:', fitness)
         # print("Standard Deviation:", stdev)
@@ -78,9 +81,11 @@ class Individual:
         #                     'confidence': 1.0, 'exception_occurred': False})
         return_dict.update({'recent_rsi': recent_rsi, 'confidence': 1.0, 'exception_occurred': False})
 
+        # pre_process_start_time = time.time()
         process = multiprocessing.Process(target=thread_run, args=(self.code, return_dict))
         process.start()
         process_start_time = time.time()
+        # print("Creating and starting Process took", pre_process_start_time - process_start_time, 'seconds')
 
         while process.is_alive():
             if time.time() - process_start_time > TIMEOUT:
@@ -88,6 +93,8 @@ class Individual:
                 print('Code timed out...')
                 return_dict['exception_occurred'] = True
             time.sleep(0.001)  # TODO this may be slowing down evaluation
+
+        # print('Completing Process took', process_start_time - time.time(), 'seconds')
 
         if return_dict['confidence'] is None:
             return_dict['confidence'] = 0.0

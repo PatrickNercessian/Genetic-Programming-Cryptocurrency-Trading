@@ -1,3 +1,4 @@
+import math
 import os
 import random
 import copy
@@ -12,26 +13,33 @@ from individual import Individual
 
 
 class Population:
-    def __init__(self, crypto_symbol: str, interval: str, pop_size=100, init_tree_size=5, mutation_probability=0.05,
-                 num_dataframes=3):
+    def __init__(self, crypto_symbol: str, interval: str, pop_size=1000, init_tree_size=5, num_generations=10,
+                 mutation_probability=0.05, final_num_dataframes=3):
         self.crypto_symbol = crypto_symbol
         self.interval = interval
         self.pop_size = pop_size
+        self.init_tree_size = init_tree_size
+        self.num_generations = num_generations
         self.mutation_probability = mutation_probability
+        self.final_num_dataframes = final_num_dataframes
 
-        self.current_dataframes = init_dataframes(num_dataframes, crypto_symbol, interval)
+        self.current_dataframes = init_dataframes(1, crypto_symbol, interval)
         self.directory_name = helper.create_run_folder()
 
         self.current_generation = 0
 
         self.individuals = []
-        for i in range(pop_size):
-            self.individuals.append(Individual(tree.plant_tree(init_tree_size), crypto_symbol, interval))
 
-    # def init_dataframes(self, num_dataframes, crypto_symbol, interval):
-    #     self.current_dataframes = []
-    #     for i in range(num_dataframes):
-    #         self.current_dataframes.append(crypto_data.get_random_df(crypto_symbol, interval))
+    def run(self):
+        # Initiating population
+        for i in range(self.pop_size):
+            self.individuals.append(Individual(tree.plant_tree(self.init_tree_size), self.crypto_symbol, self.interval))
+        self.evaluate_and_sort()
+
+        # Running evolution
+        for i in range(self.num_generations):
+            self.next_gen()
+            self.evaluate_and_sort()
 
     def next_gen(self):
         if self.pop_size < 1000:
@@ -69,9 +77,12 @@ class Population:
                         new_individuals.append(new_indiv_2)
                     break
 
-        self.current_dataframes = init_dataframes(len(self.current_dataframes), self.crypto_symbol, self.interval)
-        self.current_generation += 1
+                    # Gen 1: 1, Gen 5: 2, Gen 8: 3
         self.individuals = new_individuals
+
+        self.current_generation += 1
+        num_dataframes = int(math.ceil((self.current_generation / self.num_generations) * self.final_num_dataframes))
+        self.current_dataframes = init_dataframes(num_dataframes, self.crypto_symbol, self.interval)
 
     def evaluate_and_sort(self):
         count = 0

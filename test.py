@@ -58,6 +58,7 @@ def test_tree():
     print('\n\n' + code + '\n\n')
     exec(code)
 
+
 def decision_example1(recent_rsi):
     if recent_rsi < 30:
         should_buy = True
@@ -65,6 +66,7 @@ def decision_example1(recent_rsi):
     elif recent_rsi > 70:
         should_buy = False
         confidence = (recent_rsi - 70) / 30
+
 
 def test_example_algorithm():
     if_node = Node('if ___:', 1)
@@ -104,12 +106,6 @@ def test_example_algorithm():
     equals3.right = divide
     divide.left = Node('v0', 7)
     divide.right = Node('20', 7)
-
-
-
-
-
-
 
     elif_node = Node('elif ___:', 3)
     block.right = elif_node
@@ -178,19 +174,19 @@ def test1():
     interval = '3m'
     individual = Individual(tree, crypto_symbol, interval)
     individual.evaluate(crypto_data.get_random_df(crypto_symbol, interval))
-    
+
 
 def test_plant_tree():
     # for i in range(30):
-        tree = plant_tree(4)
-        print(count_children(tree.root))
-        print(decode_in_order(tree.root), '\n\n')
-        print(get_used_variables(tree.root))
-        print()
+    tree = plant_tree(4)
+    print(count_children(tree.root))
+    print(decode_in_order(tree.root), '\n\n')
+    print(get_used_variables(tree.root))
+    print()
 
 
 def test_crypto_data():
-    get_all_crypto_data_online('btc_bars.csv', 'BTCUSDT', '')
+    get_all_crypto_data_online('BTCUSDT', '')
 
 
 def test2():
@@ -212,6 +208,7 @@ def test3():
 def test_create_folder():
     helper.create_run_folder()
 
+
 def test_confidence_bool():
     # WORKS:
     a = Node('=', 0)
@@ -224,8 +221,6 @@ def test_confidence_bool():
     tree = Tree(a)
     indiv = Individual(tree, 'BTCUSDT', '1d')
     indiv.evaluate([crypto_data.get_random_df('BTCUSDT', '1d'), crypto_data.get_random_df('BTCUSDT', '1d')])
-
-
 
     # But this one doesn't work
     # a = Node('=', 0)
@@ -245,13 +240,22 @@ def test_confidence_bool():
 
 
 def test_mutation():
-    tree = plant_tree(2)
-    indiv = Individual(tree, 'BTCUSDT', '3m')
-    mutated_indiv = mutate(indiv)
-
-    print(indiv.code)
-    print()
-    print(mutated_indiv.code)
+    for _ in range(10):
+        tree = plant_tree(5)
+        indiv = Individual(tree, 'BTCUSDT', '3m')
+        mutated_indiv = mutate(indiv)
+        for i in range(10):
+            if mutated_indiv is None:
+                print('Failed mutation once...')
+                mutated_indiv = mutate(indiv)
+            else:
+                break
+        if mutated_indiv is None:
+            print('Failed mutation 10 times, continuing...')
+            continue
+        print('OG Indiv:\n' + indiv.code)
+        print('\n\nMutated Indiv:\n' + mutated_indiv.code)
+        print('\n\n\n\n')
 
 
 def test_crossover():
@@ -273,18 +277,16 @@ def test_crossover():
 
 
 def test_population():
-    population = Population('BTCUSDT', '1d', pop_size=1000, num_dataframes=3)
-    population.evaluate_and_sort()
-    for i in range(10):
-        population.next_gen()
-        population.evaluate_and_sort()
+    population = Population('BTCUSDT', '1d')
+    population.run()
 
 
 if __name__ == '__main__':
     # test_crossover()
     # test_example_algorithm()
     # test_plant_tree()
-    test_population()
+    # test_population()
+    test_mutation()
     # test_confidence_bool()
     # x = 3 > 5 <= 12
     # y = 30 <= -258 == 1.0
@@ -298,7 +300,6 @@ if __name__ == '__main__':
     #     print('yes', p)
     # else:
     #     print('no', p)
-
 
     # var_name_list = ['recent_rsi', 'confidence', 'v0', 'v1']
     # import time

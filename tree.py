@@ -218,13 +218,6 @@ class Tree:
                 elif which_child == 1:
                     expected_types = []
                 elif which_child == 2:
-                    # TODO the issue here is during crossover, a variable may be inserted that isn't in tree's var_list
-                    # TODO (This is correct btw, don't overthink. It happens in second gen bc variation is only time
-                    #                                                               get expected is called)
-                    # TODO should we merge the two trees var_lists during crossover? Or should we abandon the concept
-                    # TODO of creating new variables, and instead just have x number of preexisting variables?
-                    print(self.var_name_list)
-                    print(parent.left.value)
                     left_var_type = next(x for x in self.var_list if x.name == parent.left.value).v_type
 
                     if left_var_type == int or left_var_type == float:
