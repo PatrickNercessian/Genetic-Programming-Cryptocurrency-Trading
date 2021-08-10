@@ -197,12 +197,11 @@ def mutate(indiv: Individual):
     # TODO tweak max_depth parameter
     # TODO pass in indiv's var_list and allow plant_tree to use those vars while growing
     #                                                               (maybe just grow the original tree from random node)
-    random_subtree = tree.plant_tree(2)
+    random_subtree = tree.plant_tree(indiv.tree.max_depth, current_depth=node.depth)
 
     possible_set = []
-    for i in expected_types:  # TODO use simplified method of flattening list that's used in tree.py
-        for j in i:
-            possible_set.append(j)
+    for i in expected_types:
+        possible_set.extend(i)
 
     if random_subtree.root.value in possible_set:
         node = random_subtree.root

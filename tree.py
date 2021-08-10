@@ -25,7 +25,8 @@ class Tree:
     def __init__(self, root):
         self.root = root
         self.node_count = count_children(root)
-        self.highest_depth = 1  # TODO This is faulty, does not account for crossover or mutation
+        self.max_depth = -1
+        # self.highest_depth = 1  # TODO This is faulty, does not account for crossover or mutation
 
         # terminal set (can be added to)  # TODO add df_indicators once relevant function nodes are added
         # self.var_list = ['should_buy', 'stop_loss', 'confidence', 'recent_rsi']
@@ -299,13 +300,14 @@ def decode_in_order(node: Node, num_indentations=0):
     return ''
 
 
-def plant_tree(max_depth: int):
-    root = Node(random.choice(line_type), depth=0)  # TODO right now, line_type is only '\n'
+def plant_tree(max_depth: int, current_depth=0):
+    root = Node(random.choice(line_type), depth=current_depth)  # TODO right now, line_type is only '\n'
     tree = Tree(root)
+    tree.max_depth = max_depth
 
-    root.left = grow_tree(tree, root, 0, 1, max_depth)
-    root.middle = grow_tree(tree, root, 1, 1, max_depth)
-    root.right = grow_tree(tree, root, 2, 1, max_depth)
+    root.left = grow_tree(tree, root, 0, current_depth, max_depth)
+    root.middle = grow_tree(tree, root, 1, current_depth, max_depth)
+    root.right = grow_tree(tree, root, 2, current_depth, max_depth)
 
     tree.node_count = count_children(root)
 
@@ -357,8 +359,8 @@ def grow_tree(tree: Tree, parent: Node, which_child, depth: int, max_depth: int)
                 else:  # elif rand < is_float_allowed + is_int_allowed + is_bool_allowed
                     node = Node(str(random.choice([True, False])), depth)  # same probability as above
 
-            if depth + 1 > tree.highest_depth:
-                tree.highest_depth = depth + 1
+            # if depth + 1 > tree.highest_depth:
+            #     tree.highest_depth = depth + 1
 
             node.left = grow_tree(tree, node, 0, depth + 1, max_depth)
             node.middle = grow_tree(tree, node, 1, depth + 1, max_depth)
