@@ -180,7 +180,7 @@ def test1():
 
 def test_plant_tree():
     # for i in range(30):
-    tree = plant_tree(4)
+    tree = plant_tree(7)
     print(count_children(tree.root))
     print(decode_in_order(tree.root), '\n\n')
     print(get_used_variables(tree.root))
@@ -295,8 +295,8 @@ def test_population():
 if __name__ == '__main__':
     # test_crossover()
     # test_example_algorithm()
-    # test_plant_tree()
-    test_mutated_crossover()
+    test_plant_tree()
+    # test_mutated_crossover()
     # test_population()
     # test_mutation()
     # test_confidence_bool()

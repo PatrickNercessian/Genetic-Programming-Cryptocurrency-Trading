@@ -364,7 +364,7 @@ def decode_in_order(node: Node, num_indentations=0):
                     or (to_add in boolean_type):  # or (to_add in in_type)
                 to_add = ' ' + to_add + ' '
             elif to_add in ['block', 'if-elif-block']:
-                to_add = '\n ___\n'
+                to_add = '\n' + (' ' * (num_indentations + 1)) + '___\n'
 
             if node.middle is None:
                 code += to_add
@@ -372,7 +372,7 @@ def decode_in_order(node: Node, num_indentations=0):
                 index_of_blank = to_add.index('___')
                 code += to_add[:index_of_blank]
 
-                if to_add == '\n ___\n':
+                if to_add.startswith('\n') and to_add.endswith('___\n'):
                     code += decode_in_order(node.middle, num_indentations + 1)
                 else:
                     code += decode_in_order(node.middle, num_indentations)
