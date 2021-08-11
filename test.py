@@ -241,6 +241,16 @@ def test_confidence_bool():
     # indiv.evaluate([crypto_data.get_random_df('BTCUSDT', '1d')])
 
 
+def test_select_random_node():
+    for _ in range(10):
+        tree = plant_tree(5)
+        print('\n\n' + decode_in_order(tree.root) + '\n\n')
+        node, parent, which_child = tree.select_random_node(tree.root)
+        print('Random Node:', node.value, '\n')
+        print('Parent:', parent.value, '\n')
+        print('Child', which_child)
+
+
 def test_mutation():
     for _ in range(30):
         tree = plant_tree(3)
@@ -295,9 +305,10 @@ def test_population():
 if __name__ == '__main__':
     # test_crossover()
     # test_example_algorithm()
-    test_plant_tree()
+    # test_plant_tree()
+    # test_select_random_node()
     # test_mutated_crossover()
-    # test_population()
+    test_population()
     # test_mutation()
     # test_confidence_bool()
     # x = 3 > 5 <= 12

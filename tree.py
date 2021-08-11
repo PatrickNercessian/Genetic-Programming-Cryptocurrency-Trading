@@ -301,30 +301,24 @@ class Tree:
             self.bool_var_names.append(var.name)
 
     def select_random_node(self, node: Node, parent: Node = None, which_child: int = None):
-        p = random.random()
-        # if node is None:  # Restart if you never selected a node
-        #     return self.random_node(self.root)
-        if p < (node.depth / self.node_count):
+        rand = random.random()
+        if rand < (node.depth / self.node_count):
             return node, parent, which_child
 
-        possible_paths = []
-        if node.left:
-            possible_paths.append(0)
-        if node.middle:
-            possible_paths.append(1)
-        if node.right:
-            possible_paths.append(2)
+        left_path_exists = True if node.left else False
+        middle_path_exists = True if node.middle else False
+        right_path_exists = True if node.right else False
+        num_paths = (left_path_exists + middle_path_exists + right_path_exists)
 
-        if not possible_paths:  # if terminal node with no children
+        if num_paths == 0:  # if terminal node with no children
             return self.select_random_node(self.root)
 
-        rand_path = random.choice(possible_paths)
-
-        if rand_path == 0:
+        p = random.random() * num_paths
+        if p < left_path_exists:
             return self.select_random_node(node.left, node, 0)
-        elif rand_path == 1:
+        elif p < middle_path_exists + left_path_exists:
             return self.select_random_node(node.middle, node, 1)
-        elif rand_path == 2:
+        elif p < right_path_exists + middle_path_exists + left_path_exists:
             return self.select_random_node(node.right, node, 2)
 
 
