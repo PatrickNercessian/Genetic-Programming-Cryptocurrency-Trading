@@ -26,10 +26,8 @@ class Tree:
         self.root = root
         self.node_count = count_children(root)
         self.max_depth = -1
-        # self.highest_depth = 1  # TODO This is faulty, does not account for crossover or mutation
 
         # terminal set (can be added to)  # TODO add df_indicators once relevant function nodes are added
-        # self.var_list = ['should_buy', 'stop_loss', 'confidence', 'recent_rsi']
         self.var_list = [Variable('confidence', float, 0.0, 1.0),
                          Variable('recent_rsi', float, 0.0, 100.0)]
         self.var_name_list = ['confidence', 'recent_rsi']
@@ -88,9 +86,6 @@ class Tree:
                     else:  # elif rand < is_float_allowed + is_int_allowed + is_bool_allowed
                         node = Node(str(random.choice([True, False])), depth)  # same probability as above
 
-                # if depth + 1 > tree.highest_depth:
-                #     tree.highest_depth = depth + 1
-
                 node.left = self.grow_branch(node, 0, depth + 1, max_depth)
                 node.middle = self.grow_branch(node, 1, depth + 1, max_depth)
                 node.right = self.grow_branch(node, 2, depth + 1, max_depth)
@@ -124,17 +119,12 @@ class Tree:
 
     #  which_child: 0 for left child, 1 for middle child, 2 for right child
     def get_expected(self, parent: Node, which_child: int, grow_freely=True):
-        expected_types = [function_set, self.var_name_list]
+        expected_types = []
         expected_variable_types = []
 
-        if parent is None:  # if root
-            return expected_types
-
-        if parent.value in function_set:
+        if parent.value in function_set:  # don't check all these for no reason if it's just a terminal node
             if parent.value in unary_operator_type:
-                if which_child in [0, 2]:
-                    expected_types = []
-                elif which_child == 1:
+                if which_child == 1:
                     expected_variable_types = [float, int]
                     expected_types = [self.int_var_names, self.float_var_names]
                     if grow_freely:
@@ -145,35 +135,24 @@ class Tree:
                     expected_types = [self.int_var_names, self.float_var_names]
                     if grow_freely:
                         expected_types.extend([unary_operator_type, binary_operator_type])
-                elif which_child == 1:
-                    expected_types = []
             elif parent.value == '\n':  # TODO maybe use 'nothing' node as possible expected_type
                 if which_child in [0, 2]:
                     expected_types = [assignment_type]
                     if grow_freely:
                         expected_types.extend([line_type, if_type, while_type])  # for_type
-                elif which_child == 1:
-                    expected_types = []
 
             # elif parent.value == 'for ___:':
-            #     if which_child == 0:
-            #         expected_types = []
-            #     elif which_child == 1:
+            #     if which_child == 1:
             #         expected_types = [in_type]
             #     elif which_child == 2:
             #         expected_types = [block_type]
             # elif parent.value == 'in':
             #     if which_child in [0, 2]:
             #         expected_types = [self.list_var_names]
-            #     elif which_child == 1:
-            #         expected_types = []
 
             elif parent.value == 'while ___:':
-                if which_child == 0:
-                    expected_types = []
-                elif which_child == 1:
+                if which_child == 1:
                     expected_variable_types = [bool]
-                    expected_types = []
                     if self.bool_var_names:
                         expected_types.append(self.bool_var_names)
                     if grow_freely or not self.bool_var_names:
@@ -181,11 +160,8 @@ class Tree:
                 elif which_child == 2:
                     expected_types = [block_type]
             elif parent.value in ['if ___:', 'elif ___:']:
-                if which_child == 0:
-                    expected_types = []
-                elif which_child == 1:
+                if which_child == 1:
                     expected_variable_types = [bool]
-                    expected_types = []
                     if self.bool_var_names:
                         expected_types.append(self.bool_var_names)
                     if grow_freely or not self.bool_var_names:
@@ -193,24 +169,18 @@ class Tree:
                 elif which_child == 2:
                     expected_types = [if_elif_block_type]
             elif parent.value == 'else:':
-                if which_child in [0, 1]:
-                    expected_types = []
-                elif which_child == 2:
+                if which_child == 2:
                     expected_types = [block_type]
 
             elif parent.value == 'if-elif-block':  # to be replaced by '\n ___\n'
-                if which_child == 0:
-                    expected_types = []
-                elif which_child == 1:
+                if which_child == 1:
                     expected_types = [assignment_type]
                     if grow_freely:
                         expected_types.extend([line_type, if_type, while_type])  # for_type
                 elif which_child == 2:
                     expected_types = [nothing_type, else_type]
             elif parent.value == 'block':  # to be replaced by '\n ___\n'
-                if which_child in [0, 2]:
-                    expected_types = []
-                elif which_child == 1:
+                if which_child == 1:
                     expected_types = [assignment_type]
                     if grow_freely:
                         expected_types.extend([line_type, if_type, while_type])  # for_type
@@ -218,36 +188,27 @@ class Tree:
             elif parent.value in ['and', 'or']:
                 if which_child in [0, 2]:
                     expected_variable_types = [bool]
-                    expected_types = []
                     if self.bool_var_names:
                         expected_types.append(self.bool_var_names)
                     if grow_freely or not self.bool_var_names:
                         expected_types.append(boolean_type)
-                elif which_child == 1:
-                    expected_types = []
             elif parent.value in ['>=', '<=', '>', '<']:
                 if which_child in [0, 2]:
                     expected_variable_types = [float, int]
                     expected_types = [self.int_var_names, self.float_var_names]
                     if grow_freely:
                         expected_types.extend([unary_operator_type, binary_operator_type])
-                elif which_child == 1:
-                    expected_types = []
             elif parent.value in ['==', '!=']:
                 if which_child in [0, 2]:
                     expected_variable_types = [float, int, bool]
                     expected_types = [self.int_var_names, self.float_var_names, self.bool_var_names]
                     if grow_freely:
                         expected_types.extend([unary_operator_type, binary_operator_type, boolean_type])
-                elif which_child == 1:
-                    expected_types = []
 
             elif parent.value == '=':
                 if which_child == 0:  # TODO This only executes during crossover or mutation
                     expected_variable_types = [float, int, bool]
                     expected_types = [[x for x in self.var_name_list if x != 'recent_rsi']]
-                elif which_child == 1:
-                    expected_types = []
                 elif which_child == 2:
                     left_var_type = next(x for x in self.var_list if x.name == parent.left.value).v_type
 
@@ -264,12 +225,6 @@ class Tree:
                             expected_types.append(boolean_type)
                     elif left_var_type == list:  # TODO useless for now, and written incorrectly: chance of no list vars
                         expected_types = [self.list_var_names]
-
-            elif parent.value == 'nothing':
-                expected_types = []
-
-        else:  # terminal node or 'nothing' node
-            expected_types = []
 
         return expected_types, expected_variable_types
 
@@ -302,7 +257,7 @@ class Tree:
 
     def select_random_node(self, node: Node, parent: Node = None, which_child: int = None):
         rand = random.random()
-        if rand < (node.depth / self.node_count):
+        if rand < (node.depth / self.node_count):  # root node has depth 0 so never chosen
             return node, parent, which_child
 
         left_path_exists = True if node.left else False
